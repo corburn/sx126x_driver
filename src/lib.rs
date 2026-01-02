@@ -47,6 +47,8 @@ pub mod status;
 pub mod types;
 pub mod commands;
 pub mod regs;
+pub mod utils;
+pub mod workarounds;
 
 #[cfg(feature = "bpsk")]
 pub mod bpsk;
