@@ -47,7 +47,7 @@ impl<H: Hal> SX126x<H> {
     ) -> Result<(), Error> {
         let mut reg = [0u8];
         self.read_register(crate::regs::REG_TX_MODULATION, &mut reg)?;
-        
+
         let value = if pkt_type == PacketType::Lora {
             if let Some(bw) = lora_bw {
                 if bw == LoraBw::Bw500 {
@@ -61,7 +61,7 @@ impl<H: Hal> SX126x<H> {
         } else {
             reg[0] | 0x04 // Set bit 2 for non-LoRa modulations
         };
-        
+
         self.write_register(crate::regs::REG_TX_MODULATION, &[value])
     }
 
@@ -71,13 +71,13 @@ impl<H: Hal> SX126x<H> {
     pub fn workaround_inverted_iq(&mut self, enable: bool) -> Result<(), Error> {
         let mut reg = [0u8];
         self.read_register(crate::regs::REG_IQ_POLARITY, &mut reg)?;
-        
+
         let value = if enable {
             0x46 // Inverted IQ
         } else {
             0x44 // Standard IQ
         };
-        
+
         self.write_register(crate::regs::REG_IQ_POLARITY, &[value])
     }
 

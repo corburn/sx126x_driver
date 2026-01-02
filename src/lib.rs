@@ -42,11 +42,11 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod commands;
 pub mod hal;
+pub mod regs;
 pub mod status;
 pub mod types;
-pub mod commands;
-pub mod regs;
 pub mod utils;
 pub mod workarounds;
 
@@ -81,4 +81,3 @@ impl<H: Hal> SX126x<H> {
         &mut self.hal
     }
 }
-

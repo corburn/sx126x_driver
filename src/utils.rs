@@ -55,22 +55,19 @@ pub fn get_lora_time_on_air_numerator(
     } else {
         0
     };
-    
+
     if n_payload < 0 {
         n_payload = 0;
     }
 
     let preamble_duration = (preamble_len + 4) * (1 << sf);
     let payload_duration = n_payload * (1 << sf);
-    
+
     ((preamble_duration + payload_duration + 1) * 1000) as u32
 }
 
 /// Get LoRa time-on-air in milliseconds
-pub fn get_lora_time_on_air_in_ms(
-    pkt_params: &LoraPktParams,
-    mod_params: &LoraModParams,
-) -> u32 {
+pub fn get_lora_time_on_air_in_ms(pkt_params: &LoraPktParams, mod_params: &LoraModParams) -> u32 {
     let numerator = get_lora_time_on_air_numerator(pkt_params, mod_params);
     let bw_hz = mod_params.bw.to_hz();
     (numerator + (bw_hz / 2)) / bw_hz
@@ -83,26 +80,23 @@ pub fn get_gfsk_time_on_air_numerator(pkt_params: &GfskPktParams) -> u32 {
     let preamble = pkt_params.preamble_len_in_bits as u32;
     let sync_word = pkt_params.sync_word_len_in_bits as u32;
     let payload = 8 * pkt_params.pld_len_in_bytes as u32;
-    
+
     let header = match pkt_params.header_type {
         GfskPktLenMode::Fixed => 0,
         GfskPktLenMode::Variable => 8,
     };
-    
+
     let crc = match pkt_params.crc_type {
         GfskCrcType::Off => 0,
         GfskCrcType::Byte1 | GfskCrcType::Byte1Inv => 8,
         GfskCrcType::Bytes2 | GfskCrcType::Bytes2Inv => 16,
     };
-    
+
     preamble + sync_word + header + payload + crc
 }
 
 /// Get GFSK time-on-air in milliseconds
-pub fn get_gfsk_time_on_air_in_ms(
-    pkt_params: &GfskPktParams,
-    mod_params: &GfskModParams,
-) -> u32 {
+pub fn get_gfsk_time_on_air_in_ms(pkt_params: &GfskPktParams, mod_params: &GfskModParams) -> u32 {
     let numerator = get_gfsk_time_on_air_numerator(pkt_params);
     let br_bps = mod_params.br_in_bps;
     ((numerator * 1000 + br_bps / 2) / br_bps) as u32

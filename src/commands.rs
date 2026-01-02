@@ -23,20 +23,20 @@ pub enum OpCode {
     CalibrateImage = 0x98,
     SetPaCfg = 0x95,
     SetRxTxFallbackMode = 0x93,
-    
+
     // Registers and buffer access
     WriteRegister = 0x0D,
     ReadRegister = 0x1D,
     WriteBuffer = 0x0E,
     ReadBuffer = 0x1E,
-    
+
     // DIO and IRQ control
     SetDioIrqParams = 0x08,
     GetIrqStatus = 0x12,
     ClrIrqStatus = 0x02,
     SetDio2AsRfSwitchCtrl = 0x9D,
     SetDio3AsTcxoCtrl = 0x97,
-    
+
     // RF modulation and packet-related
     SetRfFrequency = 0x86,
     SetPktType = 0x8A,
@@ -47,7 +47,7 @@ pub enum OpCode {
     SetCadParams = 0x88,
     SetBufferBaseAddress = 0x8F,
     SetLoraSymbNumTimeout = 0xA0,
-    
+
     // Communication status
     GetStatus = 0xC0,
     GetRxBufferStatus = 0x13,
@@ -55,7 +55,7 @@ pub enum OpCode {
     GetRssiInst = 0x15,
     GetStats = 0x10,
     ResetStats = 0x00,
-    
+
     // Miscellaneous
     GetDeviceErrors = 0x17,
     ClrDeviceErrors = 0x07,
@@ -135,7 +135,11 @@ impl<H: Hal> SX126x<H> {
     }
 
     /// Set RX duty cycle mode
-    pub fn set_rx_duty_cycle(&mut self, rx_time_in_ms: u32, sleep_time_in_ms: u32) -> Result<(), Error> {
+    pub fn set_rx_duty_cycle(
+        &mut self,
+        rx_time_in_ms: u32,
+        sleep_time_in_ms: u32,
+    ) -> Result<(), Error> {
         let rx_time_rtc = rx_time_in_ms * 64;
         let sleep_time_rtc = sleep_time_in_ms * 64;
         self.set_rx_duty_cycle_with_timings_in_rtc_step(rx_time_rtc, sleep_time_rtc)
@@ -227,7 +231,7 @@ impl<H: Hal> SX126x<H> {
         cmd[1] = ((address >> 8) & 0xFF) as u8;
         cmd[2] = (address & 0xFF) as u8;
         cmd[3..4 + buffer.len().min(252)].copy_from_slice(&buffer[..buffer.len().min(252)]);
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
         self.hal.write(&cmd[..3]).map_err(|_| Error::Hal)?;
         self.hal.write(buffer).map_err(|_| Error::Hal)
@@ -241,7 +245,7 @@ impl<H: Hal> SX126x<H> {
             (address & 0xFF) as u8,
             NOP,
         ];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
         self.hal.write_read(&cmd, buffer).map_err(|_| Error::Hal)
     }
@@ -249,7 +253,7 @@ impl<H: Hal> SX126x<H> {
     /// Write to buffer
     pub fn write_buffer(&mut self, offset: u8, buffer: &[u8]) -> Result<(), Error> {
         let cmd = [OpCode::WriteBuffer as u8, offset];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
         self.hal.write(&cmd).map_err(|_| Error::Hal)?;
         self.hal.write(buffer).map_err(|_| Error::Hal)
@@ -258,7 +262,7 @@ impl<H: Hal> SX126x<H> {
     /// Read from buffer
     pub fn read_buffer(&mut self, offset: u8, buffer: &mut [u8]) -> Result<(), Error> {
         let cmd = [OpCode::ReadBuffer as u8, offset, NOP];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
         self.hal.write_read(&cmd, buffer).map_err(|_| Error::Hal)
     }
@@ -289,10 +293,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_irq_status(&mut self) -> Result<u16, Error> {
         let cmd = [OpCode::GetIrqStatus as u8, NOP, NOP, NOP];
         let mut resp = [0u8; 3];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(((resp[1] as u16) << 8) | (resp[2] as u16))
     }
 
@@ -322,7 +328,11 @@ impl<H: Hal> SX126x<H> {
     }
 
     /// Set DIO3 as TCXO control
-    pub fn set_dio3_as_tcxo_ctrl(&mut self, voltage: TcxoCtrlVoltage, timeout: u32) -> Result<(), Error> {
+    pub fn set_dio3_as_tcxo_ctrl(
+        &mut self,
+        voltage: TcxoCtrlVoltage,
+        timeout: u32,
+    ) -> Result<(), Error> {
         let buf = [
             OpCode::SetDio3AsTcxoCtrl as u8,
             voltage as u8,
@@ -361,10 +371,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_pkt_type(&mut self) -> Result<PacketType, Error> {
         let cmd = [OpCode::GetPktType as u8, NOP, NOP];
         let mut resp = [0u8; 2];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         match resp[1] {
             0x00 => Ok(PacketType::Gfsk),
             0x01 => Ok(PacketType::Lora),
@@ -402,7 +414,7 @@ impl<H: Hal> SX126x<H> {
         if nb_of_symbs > MAX_LORA_SYMB_NUM_TIMEOUT {
             return Err(Error::InvalidParameter);
         }
-        
+
         if nb_of_symbs == 0 {
             // Disable timeout
             let mut reg = [0u8];
@@ -411,16 +423,16 @@ impl<H: Hal> SX126x<H> {
             self.write_register(crate::regs::REG_LR_SYNCH_TIMEOUT, &reg)?;
             return Ok(());
         }
-        
+
         // Calculate exp and mant
         let mut exp = 0u8;
         let mut mant = nb_of_symbs;
-        
+
         while mant > 31 {
             mant = (mant + 1) >> 1;
             exp += 1;
         }
-        
+
         let reg = [exp + (mant << 3)];
         self.write_register(crate::regs::REG_LR_SYNCH_TIMEOUT, &reg)
     }
@@ -429,13 +441,15 @@ impl<H: Hal> SX126x<H> {
     pub fn get_status(&mut self) -> Result<ChipStatus, Error> {
         let cmd = [OpCode::GetStatus as u8];
         let mut resp = [0u8; 1];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         let cmd_status_val = (resp[0] >> 1) & 0x07;
         let chip_mode_val = (resp[0] >> 4) & 0x07;
-        
+
         let cmd_status = match cmd_status_val {
             0 => CommandStatus::Reserved,
             1 => CommandStatus::Rfu,
@@ -446,7 +460,7 @@ impl<H: Hal> SX126x<H> {
             6 => CommandStatus::CommandTxDone,
             _ => CommandStatus::Reserved,
         };
-        
+
         let chip_mode = match chip_mode_val {
             0 => ChipMode::Unused,
             1 => ChipMode::Rfu,
@@ -457,18 +471,23 @@ impl<H: Hal> SX126x<H> {
             6 => ChipMode::Tx,
             _ => ChipMode::Unused,
         };
-        
-        Ok(ChipStatus { cmd_status, chip_mode })
+
+        Ok(ChipStatus {
+            cmd_status,
+            chip_mode,
+        })
     }
 
     /// Get RX buffer status
     pub fn get_rx_buffer_status(&mut self) -> Result<RxBufferStatus, Error> {
         let cmd = [OpCode::GetRxBufferStatus as u8, NOP, NOP];
         let mut resp = [0u8; 2];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(RxBufferStatus {
             pld_len_in_bytes: resp[0],
             buffer_start_pointer: resp[1],
@@ -479,10 +498,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_gfsk_pkt_status(&mut self) -> Result<GfskPktStatus, Error> {
         let cmd = [OpCode::GetPktStatus as u8, NOP, NOP, NOP];
         let mut resp = [0u8; 3];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         let rx_status = GfskRxStatus {
             pkt_sent: (resp[0] & 0x01) != 0,
             pkt_received: (resp[0] & 0x02) != 0,
@@ -491,7 +512,7 @@ impl<H: Hal> SX126x<H> {
             crc_error: (resp[0] & 0x10) != 0,
             adrs_error: (resp[0] & 0x20) != 0,
         };
-        
+
         Ok(GfskPktStatus {
             rx_status,
             rssi_sync: -((resp[1] as i8) >> 1),
@@ -503,14 +524,16 @@ impl<H: Hal> SX126x<H> {
     pub fn get_lora_pkt_status(&mut self) -> Result<LoraPktStatus, Error> {
         let cmd = [OpCode::GetPktStatus as u8, NOP, NOP, NOP];
         let mut resp = [0u8; 3];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         let rssi_pkt = -(resp[0] as i8) / 2;
         let snr_pkt = (resp[1] as i8) / 4;
         let signal_rssi = -(resp[2] as i8) / 2;
-        
+
         Ok(LoraPktStatus {
             rssi_pkt_in_dbm: rssi_pkt,
             snr_pkt_in_db: snr_pkt,
@@ -522,10 +545,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_rssi_inst(&mut self) -> Result<i16, Error> {
         let cmd = [OpCode::GetRssiInst as u8, NOP, NOP];
         let mut resp = [0u8; 2];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(-(resp[1] as i16) / 2)
     }
 
@@ -533,10 +558,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_gfsk_stats(&mut self) -> Result<GfskStats, Error> {
         let cmd = [OpCode::GetStats as u8, NOP, NOP, NOP, NOP, NOP, NOP, NOP];
         let mut resp = [0u8; 6];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(GfskStats {
             nb_pkt_received: ((resp[0] as u16) << 8) | (resp[1] as u16),
             nb_pkt_crc_error: ((resp[2] as u16) << 8) | (resp[3] as u16),
@@ -548,10 +575,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_lora_stats(&mut self) -> Result<LoraStats, Error> {
         let cmd = [OpCode::GetStats as u8, NOP, NOP, NOP, NOP, NOP, NOP, NOP];
         let mut resp = [0u8; 6];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(LoraStats {
             nb_pkt_received: ((resp[0] as u16) << 8) | (resp[1] as u16),
             nb_pkt_crc_error: ((resp[2] as u16) << 8) | (resp[3] as u16),
@@ -569,10 +598,12 @@ impl<H: Hal> SX126x<H> {
     pub fn get_device_errors(&mut self) -> Result<u16, Error> {
         let cmd = [OpCode::GetDeviceErrors as u8, NOP, NOP, NOP];
         let mut resp = [0u8; 2];
-        
+
         self.hal.wait_on_busy().map_err(|_| Error::Hal)?;
-        self.hal.write_read(&cmd, &mut resp).map_err(|_| Error::Hal)?;
-        
+        self.hal
+            .write_read(&cmd, &mut resp)
+            .map_err(|_| Error::Hal)?;
+
         Ok(((resp[0] as u16) << 8) | (resp[1] as u16))
     }
 
@@ -586,13 +617,17 @@ impl<H: Hal> SX126x<H> {
     pub fn set_gfsk_mod_params(&mut self, params: &GfskModParams) -> Result<(), Error> {
         let br_bytes = params.br_in_bps.to_be_bytes();
         let fdev_bytes = params.fdev_in_hz.to_be_bytes();
-        
+
         let buf = [
             OpCode::SetModulationParams as u8,
-            br_bytes[1], br_bytes[2], br_bytes[3],
+            br_bytes[1],
+            br_bytes[2],
+            br_bytes[3],
             params.pulse_shape as u8,
             params.bw_dsb_param as u8,
-            fdev_bytes[1], fdev_bytes[2], fdev_bytes[3],
+            fdev_bytes[1],
+            fdev_bytes[2],
+            fdev_bytes[3],
         ];
         self.write_command(&buf).map_err(|_| Error::Hal)
     }
@@ -612,10 +647,11 @@ impl<H: Hal> SX126x<H> {
     /// Set GFSK packet parameters
     pub fn set_gfsk_pkt_params(&mut self, params: &GfskPktParams) -> Result<(), Error> {
         let preamble_bytes = params.preamble_len_in_bits.to_be_bytes();
-        
+
         let buf = [
             OpCode::SetPktParams as u8,
-            preamble_bytes[0], preamble_bytes[1],
+            preamble_bytes[0],
+            preamble_bytes[1],
             params.preamble_detector as u8,
             params.sync_word_len_in_bits,
             params.address_filtering as u8,
@@ -630,10 +666,11 @@ impl<H: Hal> SX126x<H> {
     /// Set LoRa packet parameters
     pub fn set_lora_pkt_params(&mut self, params: &LoraPktParams) -> Result<(), Error> {
         let preamble_bytes = params.preamble_len_in_symb.to_be_bytes();
-        
+
         let buf = [
             OpCode::SetPktParams as u8,
-            preamble_bytes[0], preamble_bytes[1],
+            preamble_bytes[0],
+            preamble_bytes[1],
             params.header_type as u8,
             params.pld_len_in_bytes,
             params.crc_is_on as u8,
@@ -645,22 +682,31 @@ impl<H: Hal> SX126x<H> {
     /// Set CAD parameters
     pub fn set_cad_params(&mut self, params: &CadParams) -> Result<(), Error> {
         let timeout_bytes = params.cad_timeout.to_be_bytes();
-        
+
         let buf = [
             OpCode::SetCadParams as u8,
             params.cad_symb_nb as u8,
             params.cad_detect_peak,
             params.cad_detect_min,
             params.cad_exit_mode as u8,
-            timeout_bytes[1], timeout_bytes[2], timeout_bytes[3],
+            timeout_bytes[1],
+            timeout_bytes[2],
+            timeout_bytes[3],
         ];
         self.write_command(&buf).map_err(|_| Error::Hal)
     }
 
     /// Set GFSK packet address
-    pub fn set_gfsk_pkt_address(&mut self, node_address: u8, broadcast_address: u8) -> Result<(), Error> {
+    pub fn set_gfsk_pkt_address(
+        &mut self,
+        node_address: u8,
+        broadcast_address: u8,
+    ) -> Result<(), Error> {
         self.write_register(crate::regs::REG_SYNC_WORD_BASE_ADDRESS + 8, &[node_address])?;
-        self.write_register(crate::regs::REG_SYNC_WORD_BASE_ADDRESS + 9, &[broadcast_address])
+        self.write_register(
+            crate::regs::REG_SYNC_WORD_BASE_ADDRESS + 9,
+            &[broadcast_address],
+        )
     }
 
     /// Generate random numbers
@@ -685,7 +731,7 @@ impl<H: Hal> SX126x<H> {
         self.read_register(crate::regs::REG_RTC_CTRL, &mut reg)?;
         reg[0] |= 0x01;
         self.write_register(crate::regs::REG_RTC_CTRL, &reg)?;
-        
+
         self.read_register(crate::regs::REG_EVT_CLR, &mut reg)?;
         reg[0] |= crate::regs::REG_EVT_CLR_TIMEOUT_MASK;
         self.write_register(crate::regs::REG_EVT_CLR, &reg)
@@ -747,7 +793,11 @@ impl<H: Hal> SX126x<H> {
     }
 
     /// Set trimming capacitor values
-    pub fn set_trimming_capacitor_values(&mut self, trim_xta: u8, trim_xtb: u8) -> Result<(), Error> {
+    pub fn set_trimming_capacitor_values(
+        &mut self,
+        trim_xta: u8,
+        trim_xtb: u8,
+    ) -> Result<(), Error> {
         let value = ((trim_xtb & 0x0F) << 4) | (trim_xta & 0x0F);
         self.write_register(crate::regs::REG_XTA_TRIM, &[value])
     }
@@ -757,7 +807,7 @@ impl<H: Hal> SX126x<H> {
         if addresses.len() > MAX_NB_REG_IN_RETENTION as usize {
             return Err(Error::InvalidParameter);
         }
-        
+
         for addr in addresses {
             let bytes = addr.to_be_bytes();
             // This would need to interact with the retention list register
@@ -780,7 +830,7 @@ impl<H: Hal> SX126x<H> {
     /// Get LoRa parameters from received header
     pub fn get_lora_params_from_header(&mut self) -> Result<(LoraCr, bool), Error> {
         let mut reg = [0u8];
-        
+
         // Read CR
         self.read_register(crate::regs::REG_LR_HEADER_CR, &mut reg)?;
         let cr_val = (reg[0] >> crate::regs::REG_LR_HEADER_CR_POS) & 0x07;
@@ -791,11 +841,11 @@ impl<H: Hal> SX126x<H> {
             4 => LoraCr::Cr48,
             _ => return Err(Error::InvalidParameter),
         };
-        
+
         // Read CRC
         self.read_register(crate::regs::REG_LR_HEADER_CRC, &mut reg)?;
         let crc_is_on = ((reg[0] >> crate::regs::REG_LR_HEADER_CRC_POS) & 0x01) != 0;
-        
+
         Ok((cr, crc_is_on))
     }
 
